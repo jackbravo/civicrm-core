@@ -32,6 +32,9 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   {crmRegion name='html-header' allowCmsOverride=0}{/crmRegion}
   <style type="text/css" media="print">@import url({$config->resourceBase}css/print.css);</style>
+  {if $config->customPrintCSSURL}
+  <style type="text/css" media="print">@import url({$config->customPrintCSSURL});</style>
+  {/if}
 </head>
 
 <body>

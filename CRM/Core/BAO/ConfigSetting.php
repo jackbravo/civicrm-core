@@ -408,6 +408,7 @@ class CRM_Core_BAO_ConfigSetting {
       'userFrameworkResourceURL',
       'imageUploadURL',
       'customCSSURL',
+      'customPrintCSSURL',
       'extensionsURL',
     );
   }

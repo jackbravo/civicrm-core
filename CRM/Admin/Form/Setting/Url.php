@@ -40,6 +40,7 @@ class CRM_Admin_Form_Setting_Url extends CRM_Admin_Form_Setting {
     'userFrameworkResourceURL' => CRM_Core_BAO_Setting::URL_PREFERENCES_NAME,
     'imageUploadURL' => CRM_Core_BAO_Setting::URL_PREFERENCES_NAME,
     'customCSSURL' => CRM_Core_BAO_Setting::URL_PREFERENCES_NAME,
+    'customPrintCSSURL' => CRM_Core_BAO_Setting::URL_PREFERENCES_NAME,
     'extensionsURL' => CRM_Core_BAO_Setting::URL_PREFERENCES_NAME,
   );
 

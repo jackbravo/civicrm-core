@@ -188,6 +188,7 @@ class CRM_Core_Config_MagicMerge {
       // "setting-url-*" properties are settings with special filtering
       // to return normalized URLs (in either absolute or relative format).
       'customCSSURL' => array('setting-url-abs'),
+      'customPrintCSSURL' => array('setting-url-abs'),
       'extensionsURL' => array('setting-url-abs'),
       'imageUploadURL' => array('setting-url-abs'),
       'resourceBase' => array('setting-url-rel', 'userFrameworkResourceURL'),

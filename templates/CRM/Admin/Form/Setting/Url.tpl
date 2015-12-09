@@ -60,6 +60,14 @@
             {$form.customCSSURL.html|crmAddClass:'huge40'}
         </td>
     </tr>
+    <tr class="crm-url-form-block-customPrintCSSURL">
+        <td class="label">
+            {$form.customPrintCSSURL.label} {help id='id-css_url'}
+        </td>
+        <td>
+            {$form.customPrintCSSURL.html|crmAddClass:'huge40'}
+        </td>
+    </tr>
     <tr class="crm-url-form-block-disable_core_css">
         <td class="label">
             {$form.disable_core_css.label} {help id='id-css_url'}

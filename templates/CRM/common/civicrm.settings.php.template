@@ -208,6 +208,9 @@ if (!defined('CIVICRM_UF_BASEURL')) {
 
  // Override the Custom CiviCRM CSS URL
  // $civicrm_setting['URL Preferences']['customCSSURL'] = 'http://example.com/example-css-url' ;
+ //
+ // Override the Custom CiviCRM print CSS URL
+ // $civicrm_setting['URL Preferences']['customPrintCSSURL'] = 'http://example.com/example-print-css-url' ;
 
  // Override the extensions resource URL
  // $civicrm_setting['URL Preferences']['extensionsURL'] = 'http://example.com/pathtoextensiondir'
@@ -300,7 +303,7 @@ if (!defined('CIVICRM_DB_CACHE_PORT')) {
 }
 
 /**
- * Change this if your cache server requires a password (currently only works 
+ * Change this if your cache server requires a password (currently only works
  * with Redis)
  */
 if (!defined('CIVICRM_DB_CACHE_PASSWORD')) {

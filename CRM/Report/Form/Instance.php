@@ -233,16 +233,23 @@ class CRM_Report_Form_Instance {
     $printHeaderRegion = CRM_Core_Region::instance('default-report-header', FALSE);
     $htmlHeader = ($printHeaderRegion) ? $printHeaderRegion->render('', FALSE) : '';
 
-    $defaults['report_header'] = $report_header = "<html>
+    $defaults['report_header'] = "<html>
   <head>
     <title>CiviCRM Report</title>
     <meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
-    <style type=\"text/css\">@import url({$config->userFrameworkResourceURL}css/print.css);</style>
+    <style type=\"text/css\">@import url({$config->userFrameworkResourceURL}css/print.css);</style>";
+
+    if (!empty($config->customPrintCSSURL)) {
+      $defaults['report_header'] .= "
+    <style type=\"text/css\">@import url({$config->customPrintCSSURL});</style>";
+    }
+
+    $defaults['report_header'] .= "
     {$htmlHeader}
   </head>
   <body><div id=\"crm-container\">";
 
-    $defaults['report_footer'] = $report_footer = "<p><img src=\"{$config->userFrameworkResourceURL}i/powered_by.png\" /></p></div></body>
+    $defaults['report_footer'] = "<p><img src=\"{$config->userFrameworkResourceURL}i/powered_by.png\" /></p></div></body>
 </html>
 ";
 

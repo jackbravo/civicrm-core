@@ -29,6 +29,9 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <base href="{crmURL p="" a=1}" /><!--[if IE]></base><![endif]-->
   <style type="text/css" media="screen, print">@import url({$config->userFrameworkResourceURL}css/print.css);</style>
+  {if $config->customPrintCSSURL}
+  <style type="text/css" media="screen, print">@import url({$config->customPrintCSSURL});</style>
+  {/if}
 </head>
 
 <body>
