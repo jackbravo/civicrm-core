@@ -111,19 +111,10 @@ class CRM_Custom_Page_AJAX {
    *
    */
   public static function getMultiRecordFieldList() {
-    $params = $_GET;
+    $params = CRM_Core_Page_AJAX::defaultSortAndPagerParams(0, 10);
+    $params['cid'] = CRM_Utils_Type::escape($_GET['cid'], 'Integer');
+    $params['cgid'] = CRM_Utils_Type::escape($_GET['cgid'], 'Integer');
 
-    $offset = isset($_GET['start']) ? CRM_Utils_Type::escape($_GET['start'], 'Integer') : 0;
-    $rowCount = isset($_GET['length']) ? CRM_Utils_Type::escape($_GET['length'], 'Integer') : 10;
-    $sortMapper = array();
-    foreach ($_GET['columns'] as $key => $value) {
-      $sortMapper[$key] = $value['data'];
-    };
-    $sort = isset($_GET['order'][0]['column']) ? CRM_Utils_Array::value(CRM_Utils_Type::escape($_GET['order'][0]['column'], 'Integer'), $sortMapper) : NULL;
-    $sortOrder = isset($_GET['order'][0]['dir']) ? CRM_Utils_Type::escape($_GET['order'][0]['dir'], 'String') : 'asc';
-
-    $params['page'] = ($offset / $rowCount) + 1;
-    $params['rp'] = $rowCount;
     $contactType = CRM_Contact_BAO_Contact::getContactType($params['cid']);
 
     $obj = new CRM_Profile_Page_MultipleRecordFieldsListing();
@@ -133,9 +124,11 @@ class CRM_Custom_Page_AJAX {
     $obj->_contactType = $contactType;
     $obj->_DTparams['offset'] = ($params['page'] - 1) * $params['rp'];
     $obj->_DTparams['rowCount'] = $params['rp'];
-    if ($sort && $sortOrder) {
-      $sort = CRM_Core_DAO::getFieldValue('CRM_Core_DAO_CustomField', $sort, 'column_name', 'label');
-      $obj->_DTparams['sort'] = $sort . ' ' . $sortOrder;
+    if ($params['sort']) {
+      // Will this work when CiviCRM is translated, as searching happens on the label column?
+      // I can'f find a place where the sort is added, but it should use the name, not the label.
+      $sort = CRM_Core_DAO::getFieldValue('CRM_Core_DAO_CustomField', $params['sort'][0]['column'], 'column_name', 'label');
+      $obj->_DTparams['sort'] = $sort . ' ' . $params['sort'][0]['direction'];
     }
 
     list($fields, $attributes) = $obj->browse();
