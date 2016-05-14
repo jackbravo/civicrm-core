@@ -347,11 +347,12 @@ class InstallRequirements {
 
   /**
    * Just check that the database configuration is okay.
+   *
    * @param $databaseConfig
    * @param $dbName
    */
   public function checkdatabase($databaseConfig, $dbName) {
-    if ($this->requireFunction('mysql_connect',
+    if ($this->requireFunction('mysqli_connect',
       array(
         ts("PHP Configuration"),
         ts("MySQL support"),
@@ -367,7 +368,7 @@ class InstallRequirements {
           $databaseConfig['server'],
         )
       );
-      if ($this->requireMysqlConnection($databaseConfig['server'],
+      if ($conn = $this->requireMysqlConnection($databaseConfig['server'],
         $databaseConfig['username'],
         $databaseConfig['password'],
         array(
@@ -377,17 +378,18 @@ class InstallRequirements {
         )
       )
       ) {
-        @$this->requireMySQLVersion("5.1",
+        @$this->requireMySQLVersion($conn, "5.1",
           array(
             ts("MySQL %1 Configuration", array(1 => $dbName)),
             ts("MySQL version at least %1", array(1 => '5.1')),
-            ts("MySQL version %1 or higher is required, you are running MySQL %2.", array(1 => '5.1', 2 => mysql_get_server_info())),
-            ts("MySQL %1", array(1 => mysql_get_server_info())),
+            ts("MySQL version %1 or higher is required, you are running MySQL %2.", array(
+              1 => '5.1',
+              2 => mysqli_get_server_info($conn)
+            )),
+            ts("MySQL %1", array(1 => mysqli_get_server_info($conn))),
           )
         );
-        $this->requireMySQLAutoIncrementIncrementOne($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
+        $this->requireMySQLAutoIncrementIncrementOne($conn,
           array(
             ts("MySQL %1 Configuration", array(1 => $dbName)),
             ts("Is auto_increment_increment set to 1"),
@@ -406,10 +408,18 @@ class InstallRequirements {
         else {
           $this->testing($testDetails);
         }
-        $this->requireMySQLThreadStack($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
-          $databaseConfig['database'],
+
+        $testDetails = array(
+          ts("MySQL %1 Configuration", array(1 => $dbName)),
+          ts("Is the provided database name valid?"),
+          ts("The database name provided is not valid. Please use only 0-9, a-z, A-Z and _ as characters in the name."),
+        );
+        if (!@mysqli_select_db($conn, $databaseConfig['database'])) {
+          $testDetails[2] = ts('Could not select the database.');
+          $this->error($testDetails);
+        }
+
+        $this->requireMySQLThreadStack($conn,
           self::MINIMUM_THREAD_STACK,
           array(
             ts("MySQL %1 Configuration", array(1 => $dbName)),
@@ -418,61 +428,46 @@ class InstallRequirements {
             // "The MySQL thread_stack does not meet minimum " . CRM_Upgrade_Form::MINIMUM_THREAD_STACK . "k. Please update thread_stack in my.cnf.",
           )
         );
-      }
-      $onlyRequire = ($dbName == 'Drupal') ? TRUE : FALSE;
-      $this->requireDatabaseOrCreatePermissions(
-        $databaseConfig['server'],
-        $databaseConfig['username'],
-        $databaseConfig['password'],
-        $databaseConfig['database'],
-        array(
-          ts("MySQL %1 Configuration", array(1 => $dbName)),
-          ts("Can I access/create the database?"),
-          ts("I can't create new databases and the database '%1' doesn't exist.", array(1 => $databaseConfig['database'])),
-        ),
-        $onlyRequire
-      );
-      if ($dbName != 'Drupal') {
-        $this->requireMySQLInnoDB($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
-          $databaseConfig['database'],
+
+        $onlyRequire = ($dbName == 'Drupal') ? TRUE : FALSE;
+        $this->requireDatabaseOrCreatePermissions($conn, $databaseConfig['database'],
           array(
             ts("MySQL %1 Configuration", array(1 => $dbName)),
-            ts("Can I access/create InnoDB tables in the database?"),
-            ts("Unable to create InnoDB tables. MySQL InnoDB support is required for CiviCRM but is either not available or not enabled in this MySQL database server."),
-          )
+            ts("Can I access/create the database?"),
+            ts("I can't create new databases and the database '%1' doesn't exist.", array(1 => $databaseConfig['database'])),
+          ),
+          $onlyRequire
         );
-        $this->requireMySQLTempTables($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
-          $databaseConfig['database'],
-          array(
-            ts("MySQL %1 Configuration", array(1 => $dbName)),
-            ts('Can I create temporary tables in the database?'),
-            ts('Unable to create temporary tables. This MySQL user is missing the CREATE TEMPORARY TABLES privilege.'),
-          )
-        );
-        $this->requireMySQLLockTables($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
-          $databaseConfig['database'],
-          array(
-            ts("MySQL %1 Configuration", array(1 => $dbName)),
-            ts('Can I create lock tables in the database?'),
-            ts('Unable to lock tables. This MySQL user is missing the LOCK TABLES privilege.'),
-          )
-        );
-        $this->requireMySQLTrigger($databaseConfig['server'],
-          $databaseConfig['username'],
-          $databaseConfig['password'],
-          $databaseConfig['database'],
-          array(
-            ts("MySQL %1 Configuration", array(1 => $dbName)),
-            ts('Can I create triggers in the database?'),
-            ts('Unable to create triggers. This MySQL user is missing the CREATE TRIGGERS  privilege.'),
-          )
-        );
+        if ($dbName != 'Drupal') {
+          $this->requireMySQLInnoDB($conn,
+            array(
+              ts("MySQL %1 Configuration", array(1 => $dbName)),
+              ts("Can I access/create InnoDB tables in the database?"),
+              ts("Unable to create InnoDB tables. MySQL InnoDB support is required for CiviCRM but is either not available or not enabled in this MySQL database server."),
+            )
+          );
+          $this->requireMySQLTempTables($conn,
+            array(
+              ts("MySQL %1 Configuration", array(1 => $dbName)),
+              ts('Can I create temporary tables in the database?'),
+              ts('Unable to create temporary tables. This MySQL user is missing the CREATE TEMPORARY TABLES privilege.'),
+            )
+          );
+          $this->requireMySQLLockTables($conn,
+            array(
+              ts("MySQL %1 Configuration", array(1 => $dbName)),
+              ts('Can I create lock tables in the database?'),
+              ts('Unable to lock tables. This MySQL user is missing the LOCK TABLES privilege.'),
+            )
+          );
+          $this->requireMySQLTrigger($conn,
+            array(
+              ts("MySQL %1 Configuration", array(1 => $dbName)),
+              ts('Can I create triggers in the database?'),
+              ts('Unable to create triggers. This MySQL user is missing the CREATE TRIGGERS  privilege.'),
+            )
+          );
+        }
       }
     }
   }
@@ -590,7 +585,7 @@ class InstallRequirements {
     ));
 
     // Check for MySQL support
-    $this->requireFunction('mysql_connect', array(
+    $this->requireFunction('mysqli_connect', array(
       ts("PHP Configuration"),
       ts("MySQL support"),
       ts("MySQL support not included in PHP."),
@@ -668,40 +663,6 @@ class InstallRequirements {
     }
   }
 
-  public function listErrors() {
-    if ($this->errors) {
-      echo "<p>" . ts("The following problems are preventing me from installing CiviCRM:") . "</p>";
-      foreach ($this->errors as $error) {
-        echo "<li>" . htmlentities($error) . "</li>";
-      }
-    }
-  }
-
-  /**
-   * @param null $section
-   */
-  public function showTable($section = NULL) {
-    if ($section) {
-      $tests = $this->tests[$section];
-      echo "<table class=\"testResults\" width=\"100%\">";
-      foreach ($tests as $test => $result) {
-        echo "<tr class=\"$result[0]\"><td>$test</td><td>" . nl2br(htmlentities($result[1])) . "</td></tr>";
-      }
-      echo "</table>";
-    }
-    else {
-      foreach ($this->tests as $section => $tests) {
-        echo "<h3>$section</h3>";
-        echo "<table class=\"testResults\" width=\"100%\">";
-
-        foreach ($tests as $test => $result) {
-          echo "<tr class=\"$result[0]\"><td>$test</td><td>" . nl2br(htmlentities($result[1])) . "</td></tr>";
-        }
-        echo "</table>";
-      }
-    }
-  }
-
   /**
    * @param string $funcName
    * @param $testDetails
@@ -736,6 +697,8 @@ class InstallRequirements {
    * @param $minVersion
    * @param $testDetails
    * @param null $maxVersion
+   *
+   * @return bool
    */
   public function requirePHPVersion($minVersion, $testDetails, $maxVersion = NULL) {
 
@@ -797,34 +760,6 @@ class InstallRequirements {
   /**
    * @param string $filename
    * @param $testDetails
-   */
-  public function requireNoFile($filename, $testDetails) {
-    $this->testing($testDetails);
-    $filename = $this->getBaseDir() . $filename;
-    if (file_exists($filename)) {
-      $testDetails[2] .= " (" . ts("file '%1' found", array(1 => $filename)) . ")";
-      $this->error($testDetails);
-    }
-  }
-
-  /**
-   * @param string $filename
-   * @param $testDetails
-   */
-  public function moveFileOutOfTheWay($filename, $testDetails) {
-    $this->testing($testDetails);
-    $filename = $this->getBaseDir() . $filename;
-    if (file_exists($filename)) {
-      if (file_exists("$filename.bak")) {
-        rm("$filename.bak");
-      }
-      rename($filename, "$filename.bak");
-    }
-  }
-
-  /**
-   * @param string $filename
-   * @param $testDetails
    * @param bool $absolute
    */
   public function requireWriteable($filename, $testDetails, $absolute = FALSE) {
@@ -849,32 +784,25 @@ class InstallRequirements {
   }
 
   /**
-   * @param string $moduleName
-   * @param $testDetails
-   */
-  public function requireApacheModule($moduleName, $testDetails) {
-    $this->testing($testDetails);
-    if (!in_array($moduleName, apache_get_modules())) {
-      $this->error($testDetails);
-    }
-  }
-
-  /**
    * @param $server
    * @param string $username
    * @param $password
    * @param $testDetails
+   *
+   * @return mysqli|bool
    */
   public function requireMysqlConnection($server, $username, $password, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
+    $conn = @mysqli_connect($server, $username, $password);
 
     if ($conn) {
-      return TRUE;
+      return $conn;
     }
     else {
-      $testDetails[2] .= ": " . mysql_error();
+      $testDetails[2] .= ": " . mysqli_error($conn);
       $this->error($testDetails);
+
+      return FALSE;
     }
   }
 
@@ -884,36 +812,31 @@ class InstallRequirements {
    */
   public function requireMySQLServer($server, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, NULL, NULL);
+    $conn = @mysqli_connect($server, NULL, NULL);
 
-    if ($conn || mysql_errno() < 2000) {
-      return TRUE;
-    }
-    else {
-      $testDetails[2] .= ": " . mysql_error();
+    if (!($conn || mysqli_errno($conn) < 2000)) {
+      $testDetails[2] .= ": " . mysqli_error($conn);
       $this->error($testDetails);
     }
   }
 
   /**
+   * @param $conn
    * @param $version
    * @param $testDetails
    */
-  public function requireMySQLVersion($version, $testDetails) {
+  public function requireMySQLVersion($conn, $version, $testDetails) {
     $this->testing($testDetails);
 
-    if (!mysql_get_server_info()) {
+    if (!mysqli_get_server_info($conn)) {
       $testDetails[2] = ts('Cannot determine the version of MySQL installed. Please ensure at least version %1 is installed.', array(1 => $version));
       $this->warning($testDetails);
     }
     else {
       list($majorRequested, $minorRequested) = explode('.', $version);
-      list($majorHas, $minorHas) = explode('.', mysql_get_server_info());
+      list($majorHas, $minorHas) = explode('.', mysqli_get_server_info($conn));
 
-      if (($majorHas > $majorRequested) || ($majorHas == $majorRequested && $minorHas >= $minorRequested)) {
-        return TRUE;
-      }
-      else {
+      if (!(($majorHas > $majorRequested) || ($majorHas == $majorRequested && $minorHas >= $minorRequested))) {
         $testDetails[2] .= "{$majorHas}.{$minorHas}.";
         $this->error($testDetails);
       }
@@ -921,24 +844,15 @@ class InstallRequirements {
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
-   * @param $database
+   * @param $conn
    * @param $testDetails
    */
-  public function requireMySQLInnoDB($server, $username, $password, $database, $testDetails) {
+  public function requireMySQLInnoDB($conn, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] .= ' ' . ts("Could not determine if MySQL has InnoDB support. Assuming no.");
-      $this->error($testDetails);
-      return;
-    }
 
     $innodb_support = FALSE;
-    $result = mysql_query("SHOW ENGINES", $conn);
-    while ($values = mysql_fetch_array($result)) {
+    $result = mysqli_query($conn, "SHOW ENGINES");
+    while ($values = mysqli_fetch_array($result)) {
       if ($values['Engine'] == 'InnoDB') {
         if (strtolower($values['Support']) == 'yes' ||
           strtolower($values['Support']) == 'default'
@@ -956,146 +870,93 @@ class InstallRequirements {
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
-   * @param $database
+   * @param $conn
    * @param $testDetails
    */
-  public function requireMySQLTempTables($server, $username, $password, $database, $testDetails) {
+  public function requireMySQLTempTables($conn, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] = ts('Could not login to the database.');
-      $this->error($testDetails);
-      return;
-    }
 
-    if (!@mysql_select_db($database, $conn)) {
-      $testDetails[2] = ts('Could not select the database.');
-      $this->error($testDetails);
-      return;
-    }
-
-    $result = mysql_query('CREATE TEMPORARY TABLE civicrm_install_temp_table_test (test text)', $conn);
+    $result = mysqli_query($conn, 'CREATE TEMPORARY TABLE civicrm_install_temp_table_test (test text)');
     if (!$result) {
       $testDetails[2] = ts('Could not create a temp table.');
       $this->error($testDetails);
     }
-    $result = mysql_query('DROP TEMPORARY TABLE civicrm_install_temp_table_test');
+    mysqli_query($conn, 'DROP TEMPORARY TABLE civicrm_install_temp_table_test');
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
-   * @param $database
+   * @param $conn
    * @param $testDetails
    */
-  public function requireMySQLTrigger($server, $username, $password, $database, $testDetails) {
+  public function requireMySQLTrigger($conn, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] = ts('Could not login to the database.');
-      $this->error($testDetails);
-      return;
-    }
 
-    if (!@mysql_select_db($database, $conn)) {
-      $testDetails[2] = ts('Could not select the database.');
-      $this->error($testDetails);
-      return;
-    }
-
-    $result = mysql_query('CREATE TABLE civicrm_install_temp_table_test (test text)', $conn);
+    $result = mysqli_query($conn, 'CREATE TABLE civicrm_install_temp_table_test (test text)');
     if (!$result) {
       $testDetails[2] = ts('Could not create a table in the database.');
       $this->error($testDetails);
     }
 
-    $result = mysql_query('CREATE TRIGGER civicrm_install_temp_table_test_trigger BEFORE INSERT ON civicrm_install_temp_table_test FOR EACH ROW BEGIN END');
+    $result = mysqli_query($conn, 'CREATE TRIGGER civicrm_install_temp_table_test_trigger BEFORE INSERT ON civicrm_install_temp_table_test FOR EACH ROW BEGIN END');
     if (!$result) {
-      mysql_query('DROP TABLE civicrm_install_temp_table_test');
+      mysqli_query($conn, 'DROP TABLE civicrm_install_temp_table_test');
       $testDetails[2] = ts('Could not create a database trigger.');
       $this->error($testDetails);
     }
 
-    mysql_query('DROP TRIGGER civicrm_install_temp_table_test_trigger');
-    mysql_query('DROP TABLE civicrm_install_temp_table_test');
+    mysqli_query($conn, 'DROP TRIGGER civicrm_install_temp_table_test_trigger');
+    mysqli_query($conn, 'DROP TABLE civicrm_install_temp_table_test');
   }
 
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
-   * @param $database
+   * @param $conn
    * @param $testDetails
    */
-  public function requireMySQLLockTables($server, $username, $password, $database, $testDetails) {
+  public function requireMySQLLockTables($conn, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] = ts('Could not connect to the database server.');
-      $this->error($testDetails);
-      return;
-    }
 
-    if (!@mysql_select_db($database, $conn)) {
-      $testDetails[2] = ts('Could not select the database.');
-      $this->error($testDetails);
-      return;
-    }
-
-    $result = mysql_query('CREATE TEMPORARY TABLE civicrm_install_temp_table_test (test text)', $conn);
+    $result = mysqli_query($conn, 'CREATE TEMPORARY TABLE civicrm_install_temp_table_test (test text)');
     if (!$result) {
       $testDetails[2] = ts('Could not create a table in the database.');
       $this->error($testDetails);
       return;
     }
 
-    $result = mysql_query('LOCK TABLES civicrm_install_temp_table_test WRITE', $conn);
+    $result = mysqli_query($conn, 'LOCK TABLES civicrm_install_temp_table_test WRITE');
     if (!$result) {
       $testDetails[2] = ts('Could not obtain a write lock for the database table.');
       $this->error($testDetails);
-      $result = mysql_query('DROP TEMPORARY TABLE civicrm_install_temp_table_test');
+      mysqli_query($conn, 'DROP TEMPORARY TABLE civicrm_install_temp_table_test');
       return;
     }
 
-    $result = mysql_query('UNLOCK TABLES', $conn);
+    $result = mysqli_query($conn, 'UNLOCK TABLES');
     if (!$result) {
       $testDetails[2] = ts('Could not release the lock for the database table.');
       $this->error($testDetails);
-      $result = mysql_query('DROP TEMPORARY TABLE civicrm_install_temp_table_test');
+      mysqli_query($conn, 'DROP TEMPORARY TABLE civicrm_install_temp_table_test');
       return;
     }
 
-    $result = mysql_query('DROP TEMPORARY TABLE civicrm_install_temp_table_test');
+    mysqli_query($conn, 'DROP TEMPORARY TABLE civicrm_install_temp_table_test');
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
+   * @param $conn
    * @param $testDetails
    */
-  public function requireMySQLAutoIncrementIncrementOne($server, $username, $password, $testDetails) {
+  public function requireMySQLAutoIncrementIncrementOne($conn, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] = ts('Could not connect to the database server.');
-      $this->error($testDetails);
-      return;
-    }
 
-    $result = mysql_query("SHOW variables like 'auto_increment_increment'", $conn);
+    $result = mysqli_query($conn, "SHOW variables like 'auto_increment_increment'");
     if (!$result) {
       $testDetails[2] = ts('Could not query database server variables.');
       $this->error($testDetails);
       return;
     }
     else {
-      $values = mysql_fetch_row($result);
+      $values = mysqli_fetch_row($result);
       if ($values[1] == 1) {
         $testDetails[3] = ts('MySQL server auto_increment_increment is 1');
       }
@@ -1106,35 +967,20 @@ class InstallRequirements {
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
-   * @param $database
+   * @param $conn
    * @param $minValueKB
    * @param $testDetails
    */
-  public function requireMySQLThreadStack($server, $username, $password, $database, $minValueKB, $testDetails) {
+  public function requireMySQLThreadStack($conn, $minValueKB, $testDetails) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
-    if (!$conn) {
-      $testDetails[2] = ts('Could not connect to the database server.');
-      $this->error($testDetails);
-      return;
-    }
 
-    if (!@mysql_select_db($database, $conn)) {
-      $testDetails[2] = ts('Could not select the database.');
-      $this->error($testDetails);
-      return;
-    }
-
-    $result = mysql_query("SHOW VARIABLES LIKE 'thread_stack'", $conn); // bytes => kb
+    $result = mysqli_query($conn, "SHOW VARIABLES LIKE 'thread_stack'"); // bytes => kb
     if (!$result) {
       $testDetails[2] = ts('Could not get information about the thread_stack of the database.');
       $this->error($testDetails);
     }
     else {
-      $values = mysql_fetch_row($result);
+      $values = mysqli_fetch_row($result);
       if ($values[1] < (1024 * $minValueKB)) {
         $testDetails[2] = ts('MySQL "thread_stack" is %1 kb', array(1 => ($values[1] / 1024)));
         $this->error($testDetails);
@@ -1143,26 +989,16 @@ class InstallRequirements {
   }
 
   /**
-   * @param $server
-   * @param string $username
-   * @param $password
+   * @param $conn
    * @param $database
    * @param $testDetails
    * @param bool $onlyRequire
    */
-  public function requireDatabaseOrCreatePermissions(
-    $server,
-    $username,
-    $password,
-    $database,
-    $testDetails,
-    $onlyRequire = FALSE
-  ) {
+  public function requireDatabaseOrCreatePermissions($conn, $database, $testDetails, $onlyRequire = FALSE) {
     $this->testing($testDetails);
-    $conn = @mysql_connect($server, $username, $password);
 
     $okay = NULL;
-    if (@mysql_select_db($database)) {
+    if (@mysqli_select_db($conn, $database)) {
       $okay = "Database '$database' exists";
     }
     elseif ($onlyRequire) {
@@ -1171,12 +1007,12 @@ class InstallRequirements {
       return;
     }
     else {
-      $query = sprintf("CREATE DATABASE %s", mysql_real_escape_string($database));
-      if (@mysql_query($query)) {
+      $query = sprintf("CREATE DATABASE %s", mysqli_real_escape_string($conn, $database));
+      if (@mysqli_query($conn, $query)) {
         $okay = ts("Able to create a new database.");
       }
       else {
-        $testDetails[2] .= " (" . ts("user '%1' doesn't have CREATE DATABASE permissions.", array(1 => $username)) . ")";
+        $testDetails[2] .= " (" . ts("user '%1' doesn't have CREATE DATABASE permissions.", array(1 => 'blaaa')) . ")";
         $this->error($testDetails);
         return;
       }
@@ -1190,9 +1026,11 @@ class InstallRequirements {
 
   /**
    * @param $varNames
-   * @param $errorMessage
+   * @param testDetails
+   *
+   * @return bool
    */
-  public function requireServerVariables($varNames, $errorMessage) {
+  public function requireServerVariables($varNames, $testDetails) {
     //$this->testing($testDetails);
     foreach ($varNames as $varName) {
       if (!$_SERVER[$varName]) {
@@ -1205,22 +1043,9 @@ class InstallRequirements {
     else {
       $testDetails[2] = " (" . ts('the following PHP variables are missing: %1', array(1 => implode(", ", $missing))) . ")";
       $this->error($testDetails);
-    }
-  }
 
-  /**
-   * @param $testDetails
-   *
-   * @return bool
-   */
-  public function isRunningApache($testDetails) {
-    $this->testing($testDetails);
-    if (function_exists('apache_get_modules') || stristr($_SERVER['SERVER_SIGNATURE'], 'Apache')) {
-      return TRUE;
+      return FALSE;
     }
-
-    $this->warning($testDetails);
-    return FALSE;
   }
 
   /**
@@ -1278,13 +1103,6 @@ class InstallRequirements {
     return count($this->errors);
   }
 
-  /**
-   * @return int
-   */
-  public function hasWarnings() {
-    return count($this->warnings);
-  }
-
 }
 
 /**
@@ -1298,14 +1116,14 @@ class Installer extends InstallRequirements {
    * @param $database
    */
   public function createDatabaseIfNotExists($server, $username, $password, $database) {
-    $conn = @mysql_connect($server, $username, $password);
+    $conn = @mysqli_connect($server, $username, $password);
 
-    if (@mysql_select_db($database)) {
+    if (@mysqli_select_db($conn, $database)) {
       // skip if database already present
       return;
     }
-    $query = sprintf("CREATE DATABASE %s", mysql_real_escape_string($database));
-    if (@mysql_query($query)) {
+    $query = sprintf("CREATE DATABASE %s", mysqli_real_escape_string($conn, $database));
+    if (@mysqli_query($conn, $query)) {
     }
     else {
       $errorTitle = ts("Oops! Could not create database %1", array(1 => $database));

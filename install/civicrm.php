@@ -94,7 +94,7 @@ function civicrm_main(&$config) {
     civicrm_setup($files_dirname);
   }
 
-  $dsn = "mysql://{$config['mysql']['username']}:{$config['mysql']['password']}@{$config['mysql']['server']}/{$config['mysql']['database']}?new_link=true";
+  $dsn = "mysqli://{$config['mysql']['username']}:{$config['mysql']['password']}@{$config['mysql']['server']}/{$config['mysql']['database']}?new_link=true";
 
   civicrm_source($dsn, $sqlPath . DIRECTORY_SEPARATOR . 'civicrm.mysql');
 
@@ -305,12 +305,4 @@ function civicrm_cms_base() {
   }
 
   return $url . $baseURL;
-}
-
-/**
- * @return string
- */
-function civicrm_home_url() {
-  $drupalURL = civicrm_cms_base();
-  return $drupalURL . 'index.php?q=civicrm';
 }

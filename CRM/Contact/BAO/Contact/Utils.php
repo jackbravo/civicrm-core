@@ -399,7 +399,7 @@ UNION
 SET contact_a.employer_id=contact_b.id, contact_a.organization_name=contact_b.organization_name
 WHERE contact_a.id ={$contactId} AND contact_b.id={$orgId}; ";
 
-      //FIXME : currently civicrm mysql_query support only single statement
+      //FIXME : currently civicrm mysqli_query support only single statement
       //execution, though mysql 5.0 support multiple statement execution.
       $dao = CRM_Core_DAO::executeQuery($query);
     }
