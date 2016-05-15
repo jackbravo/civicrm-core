@@ -643,6 +643,31 @@ class InstallRequirements {
   }
 
   /**
+   * @param null $section
+   */
+  public function showTable($section = NULL) {
+    if ($section) {
+      $tests = $this->tests[$section];
+      echo "<table class=\"testResults\" width=\"100%\">";
+      foreach ($tests as $test => $result) {
+        echo "<tr class=\"$result[0]\"><td>$test</td><td>" . nl2br(htmlentities($result[1])) . "</td></tr>";
+      }
+      echo "</table>";
+    }
+    else {
+      foreach ($this->tests as $section => $tests) {
+        echo "<h3>$section</h3>";
+        echo "<table class=\"testResults\" width=\"100%\">";
+
+        foreach ($tests as $test => $result) {
+          echo "<tr class=\"$result[0]\"><td>$test</td><td>" . nl2br(htmlentities($result[1])) . "</td></tr>";
+        }
+        echo "</table>";
+      }
+    }
+  }
+
+  /**
    * @return float
    */
   public function getPHPMemory() {
@@ -1101,6 +1126,13 @@ class InstallRequirements {
    */
   public function hasErrors() {
     return count($this->errors);
+  }
+
+  /**
+   * @return int
+   */
+  public function hasWarnings() {
+    return count($this->warnings);
   }
 
 }
